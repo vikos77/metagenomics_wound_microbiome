@@ -1,0 +1,193 @@
+This file contains the details about the generation of the SILVA 128 QIIME compatible database. Most of the text are copied, with modifications, of the same approach used for the 128 release.
+
+To use the SILVA database, or any database derived from SILVA, such as this one, see the SILVA license:
+https://www.arb-silva.de/fileadmin/silva_databases/LICENSE.txt
+
+Raw data from SILVA came from the SILVA exports page, here: https://www.arb-silva.de/no_cache/download/archive/release_132/Exports/
+
+This file contains the notes about generating the QIIME compatible Silva 128 release. QIIME 1.9.1 release, Primer Prospector 1.0.1, and custom scripts were used to generate these data (commands and links to custom scripts are listed below), and vsearch (2.7.1) was used for dereplicating and clustering of sequences. Please contact William Walters (william.a.walters@gmail.com) about any bugs/errors in this release.
+
+The full aligned SSU sequence from Silva with taxonomy strings in the fasta comments was downloaded from: https://www.arb-silva.de/fileadmin/silva_databases/release_132/Exports/SILVA_132_SSURef_tax_silva_full_align_trunc.fasta.gz
+This file contains 2090668 sequences (1710544 after dereplication with vsearch).
+
+Mike Robeson's code (https://github.com/mikerobeson/Misc_Code/tree/master/SILVA_to_RDP) requires PyCogent (1.5.3 was used in this case).
+
+Some of the files (particularly ones that are less likely to be used during standard amplicon processing) have been zipped to save space in this release. Usually, one will need to unzip these before using them (e.g. tree building software may or may not take a zipped fasta file as input).
+
+
+=====================
+Important Usage Notes
+=====================
+
+
+The rep_set, rep_set_aligned, and taxonomy folders are used in the same manner as other reference database (e.g. Greengenes) with some modifications, described in this section.
+
+A core alignment file (80% identity clustered sequences, with positions removed that were 100% gaps in the full, unclustered SILVA data) is present in the core_alignment/ folder. Alignment files for 90, 94, 97, and 99% identity representative sequences are present in the rep_set_aligned/ folder. These alignments are filtered to remove the positions that represent 100% gaps in the full 50000 base pair SILVA alignment.
+
+It may be necessary in some cases, if sequences are failing to align, to lower the default 0.75 value for —min_percent_id (e.g. 0.60) with QIIME’s align_seqs.py script.
+
+The suggested alignment filtering settings for filter_alignment.py (1.9.0 QIIME and later) are recommended to be -e 0.10 -g 0.80. See “Alignment Filtering” section for older versions of QIIME.
+
+Taxonomy strings are available in the raw format (strings pulled directly from the SILVA fasta labels), in an expanded RDP compatible format, and a seven-levels RDP format. The expanded RDP format contains expanded levels for every level present in any of the taxonomy strings. This has a consequence that the first 7 levels match domain through species for most Archaea, Bacteria, and many eukaryotes, but due to the extra levels present in many eukaryotes, one will have to look at deeper levels to get the species in many cases. When viewing taxonomy plots generated with these taxa strings, one will need to be aware that the expanded format may result in unmatched taxa levels (e.g. a species level for a bacterial taxon may be family level for a fungi taxon). The 7 level taxonomy uses 7 levels if they are present. If more than 7 levels are present, the first 3 and last 4 levels of taxonomy are used. If less than 7 levels are present, all levels present are used, and empty fields (e.g. d6__;d7__) are padded out to get 7 levels, with the text string of the last defined level replicated in the empty levels. The differences between these taxonomy strings (in the taxonomy/ folder) and those in the majority and consensus taxonomy folders are described at the end of this document.
+
+In the taxonomy folders, there are these files, with a brief description of what the file is to use as a guide when choosing which file to use:
+
+raw_taxonomy.txt - these are the sequence IDs followed by the raw taxonomy strings directly pulled from the SILVA NR fasta file (will work with the -m blast assignment method, but not uclust/RDP)
+
+taxonomy_7_levels.txt - This is the raw taxa, forced into exactly 7 levels as described in the preceding paragraph. This will work with all assignment methods
+
+taxonomy_all_levels.txt - This is the raw taxa, expanded out to all levels present in any of the taxonomy strings (14 total levels). Will work with all assignment methods, but will use more memory than the 7 level taxonomy. Deeper levels of taxonomy, which will mostly come from Eukaryotes will require expansion of levels used with QIIME scripts, such as summarize_taxa.py.
+
+consensus_taxonomy_7_levels.txt - This file is the same as the 7 levels, but uses the 100% consensus taxonomy (this is described in the “Consensus and Majority Taxonomies” section).
+
+consensus_taxonomy_all_levels.txt - This file is the same as the all levels taxonomy, but uses the 100% consensus taxonomy (this is described in the “Consensus and Majority Taxonomies” section).
+  
+majority_taxonomy_7_levels.txt - This file is the same as the 7 levels, but uses the 90% majority taxonomy (this is described in the “Consensus and Majority Taxonomies” section).
+     
+majority_taxonomy_all_levels.txt - This file is the same as the all levels taxonomy, but uses the 90% majority taxonomy (this is described in the “Consensus and Majority Taxonomies” section).
+
+Memory usage (not currently evaluated):
+OTU picking
+XXXXXXX gb of memory required for closed-reference UCLUST OTU picking with the rep_set_all/97 OTUs. This was tested with a small input test dataset-with larger input datasets, and open-reference OTU picking, more memory may be required. This will approximately double when -z (enable_reverse_strand_match) option used.
+
+Taxonomic Assignment
+XXXXXXXX gb required for UCLUST for assigning taxonomy with the 97% (rep_set_all, taxonomy_all) reference sequences/taxonomy mapping files (taxonomy_7_levels.txt) with a small input test data set of several thousand sequences.
+
+
+
+========================================
+QIIME-compatible database creation notes
+========================================
+
+===================================================================
+Filtering raw fasta file, creation of representative sequence files
+===================================================================
+
+clean_fasta.py (Primer Prospector) was called on the input SILVA_128_SSURef_tax_silva_full_align_trunc.fasta aligned file, with default parameters, to convert U characters to T characters, and remove gaps (the output is the initial_reads_SILVA132.fna file in the raw_data/ folder).
+
+This cleaned fasta file was then dereplicated with vsearch:
+vsearch --derep_fulllength initial_reads_SILVA132.fna  --output output_file.fna --uc output_file.uc --threads 10
+
+Then this dereplicated file was sorted by length:
+vsearch --sortbylength output_file.fna --output output_file_SortedByLength.fna
+
+This dereplicated and sorted file was then used as input for clustering at 99%, 97%, 94%, 90%, and 80% identities using vsearch with commands like so (with “—id” , X below, set to 0.99, 0.97, 0.94, 0.90, and 0.80):
+vsearch --cluster_smallmem output_file_SortedByLength.fna  --centroids output_file_percent_cluster.fna --uc output_file_percent_cluster.uc --id X --threads 10 --usersort
+
+QIIME OTU mapping files were created from the above .uc files with the custom script parse_otu_mapping_from_uc.py (https://gist.github.com/walterst/8b88b149a08ef91651f85b088efda1e2)
+
+
+
+
+==============================
+Taxonomy mapping file creation
+==============================
+
+prep_silva_data.py (Mike Robeson's script) was run on the initial_reads_SILVA132.fna file to create the raw taxonomy file. The RDP compatible (with expanded levels to match every semicolon-separated level possible in the taxonomy strings) was generated using the output created by the call to prep_silva_data.py as input for the prep_silva_taxonomy_file.py script.
+
+Non-ASCII characters, as well as asterisk "*" characters can interfere with RDP, so the taxonomy files created were filtered to remove these with the parse_nonstandard_chars.py script, located here: https://gist.github.com/walterst/0a4d36dbb20c54eeb952
+
+The 7 level RDP-compatible file was created by parsing the full 14 level taxonomy script created in the prior step with the custom script parse_to_7_taxa_levels.py, located here: https://gist.github.com/walterst/9ddb926fece4b7c0e12c
+
+=============================
+Generation of alignment files
+=============================
+
+The raw aligned fasta file (https://www.arb-silva.de/fileadmin/silva_databases/release_132/Exports/SILVA_132_SSURef_tax_silva_full_align_trunc.fasta.gz) was filtered to remove the taxonomy strings from the labels, using the truncate_fasta_labels.py script located here:
+https://gist.github.com/walterst/5b1db2a11a4490c57169
+
+Next, the U characters in this alignment were converted to T characters using Primer Prospector's clean_fasta.py script (with the --gap_chars option added to suppress gap removal).
+
+The full alignment file (SILVA_132_SSURef_tax_silva_full_align_trunc.fasta), was used with the find_all_gap_positions.py script, which is located here:
+https://gist.github.com/walterst/db491ba0fd3916af6f5e
+
+The total number of positions that are 100% gapped is 15078 from the filtered full alignment.
+
+This mask of 100% gapped positions was used with QIIME's filter_alignment.py script. The SILVA132_GapPositions.txt file was passed with the --lane_mask_fp parameter, and --allowed_gap_frac was set to 1.0. The aligned 80% OTUs file was passed through this filter, and is the core alignment file in this release. The remaining 90, 94, 97, and 99% OTUs alignment files also have the 100% gapped positions removed.
+
+The output filtered full alignment was parsed out using QIIME's filter_fasta.py (using the representative sequence files for each identity as --subject_fasta_fp parameters) to create the reference alignment files for the 99%, 97%, 94%, 90%, and 80% files. The 80% data were only used for creating the core alignment.
+
+The alignment files present for each identity (90%, 94%, 97%, and 99%) only have the above 100% gap filtering. Reference trees were built using the gap/entropy filtering of the alignment described in the Tree Construction section.
+
+Note that while testing the core alignment (i.e. by running QIIME’s align_seqs.py script using the 97% representative sequence set as input), I had to add the -e 50 -p 0.60 parameter, due to variability in the sequence length when aligning all of the representative sequences against the core alignment. This should not be needed during general usage of the core alignment, as most reads are going to be of similar length.
+
+===============================
+Splitting fasta files by domain
+===============================
+
+Seperate fasta files for 16S/18S data were created using the split_sequences_by_domain.py file https://gist.github.com/walterst/643848d1947f9d95f08b
+
+============================================
+Parsing and splitting taxonomy mapping files
+============================================
+
+The raw taxonomy mapping files were parsed out to match the representative sequence sets for each clustered subset (90, 94, 97, and 99). This was done using the parse_taxonomy_for_clustered_subset.py script located here: https://gist.github.com/walterst/4e78517e7130b445c620
+
+The taxonomy mapping files for each clustered subset were split by domain (to create the eukaryote and bacteria/archaea-only files) using the script split_taxonomy_by_domain.py, located here: https://gist.github.com/walterst/6a7c8159dc816c234943
+
+===================
+Alignment Filtering
+===================
+
+The suggested alignment filtering settings for filter_alignment.py (1.9.0 QIIME and later) are recommended to be -e 0.10 -g 0.80. For 1.8.0 QIIME, the entropy setting needs to be much lower, e.g. -e 0.0005, as this filtering is performed first, rather than after removal of gap characters, in 1.8.0.
+
+=================
+Tree construction
+=================
+
+Individual alignments were filtered using the entropy and gap setting described above with QIIME’s filter_alignment.py script. The subsequent tree was built with FastTree (2.1.3) using these parameters: 
+FastTree -spr 4 -gamma -fastest -no2nd -quiet -nopr -nt filtered_alignment_fasta > tree_file
+
+Note that the degenerate nucleotides present in these files caused there to be some stdout text that was at the beginning of the .tre files-this text was deleted by hand.
+
+These trees were visualized with Dendroscope after using a custom script to rename tips to taxonomy strings (https://gist.github.com/walterst/a46252cf1b6000490bb6). Generally correct Eukaryotic tree (SAR taxa grouped together, most Opisthokonts together, etc) although some taxa are split into deeply separated clades.
+
+Users wishing to build trees with their own data, or data clustered at other identities than the 97% OTUs, can use the above approach.
+
+======================
+Other Processing Notes
+======================
+
+
+Total number of sequences (all domains) for each clustering identity:
+99% 412168
+97% 194822
+94% 94835
+90% 40215
+80% 5539
+
+
+=================================
+Consensus and Majority Taxonomies
+=================================
+
+
+Reason for these alternative taxonomy string files:
+
+A user of the Silva119 data pointed out that the taxonomy with the SILVA119 release is based only upon the taxonomy string of the representative sequence for the cluster of reads, which could lead to incorrect confidence in taxonomy assignments at the fine level (genus/species). To address this, I have endeavoured to create taxonomy strings that are either consensus (all taxa strings must match for every read that fell into the cluster) or majority (greater than or equal to 90% of the taxonomy strings for a given cluster). If a taxonomy string fails to be consensus or majority, then it becomes ambiguous, moving up the levels of taxonomy until consensus/majority taxonomy strings are met.
+
+For example, if a cluster had two reads, and one taxonomy string was:
+D_0__Archaea;D_1__Euryarchaeota;D_2__Methanobacteria;D_3__Methanobacteriales;D_4__Methanobacteriaceae;D_5__Methanobrevibacter;D_6__Methanobrevibacter sp. HW3
+and the second taxonomy string was:
+D_0__Archaea;D_1__Euryarchaeota;D_2__Methanobacteria;D_3__Methanobacteriales;D_4__Methanobacteriaceae;D_5__Methanobrevibacter;D_6__Methanobrevibacter smithii
+
+Then for either consensus or majority strings, the level 7 (0 is the first level, the domain) data would become ambiguous, as the species levels do not match. The above string for the representative sequence taxonomy mapping file becomes:
+D_0__Archaea;D_1__Euryarchaeota;D_2__Methanobacteria;D_3__Methanobacteriales;D_4__Methanobacteriaceae;D_5__Methanobrevibacter;Ambiguous_taxa
+
+Because the taxonomy strings are not perfectly matched in terms of names/depths across all  of the SILVA data, this can lead to some taxonomies being more ambiguous with my approach (exact string matches) than they actually are, particularly for the eukaryotes. There are over 1.5 million taxonomy strings in the non-redundant SILVA 119 release (even more in later releases), so I can’t fault the maintainers of SILVA for these taxonomy strings being imperfect from a parsing/bioinformatics perspective.
+
+The scripts used to create the consensus and 90% majority taxonomy strings, create_consensus_taxonomy.py and create_majority_taxonomy.py, are located here (the OTU mapping files used with these scripts were generated during the “creation of representative sequence files” section):
+https://gist.github.com/walterst/bd69a19e75748f79efeb
+https://gist.github.com/walterst/f6f08f6583bb320bb10d
+
+==========
+References
+==========
+
+Altschul SF, Gish W, Miller W, Myers EW, Lipman DJ. 1990. Basic local alignment search tool. J Mol Biol 215(3):403-410.
+
+Edgar RC. 2010. Search and clustering orders of magnitude faster than BLAST. Bioinformatics 26(19):2460-2461.
+
+Quast C, Pruesse E, Yilmaz P, Gerken J, Schweer T, Yarza P, Peplies J, Gloeckner FO. 2013. The SILVA ribosomal RNA gene database project: improved data processing and web-based tools. Nucleic Acids Res 41: D590-596.
+
+Wang Q, Garrity GM, Tiedje JM, Cole JR. 2007. Naive Bayesian classifier for rapid assignment of rRNA sequences into the new bacterial taxonomy. Appl Environ Microb 73(16): 5261-5267.

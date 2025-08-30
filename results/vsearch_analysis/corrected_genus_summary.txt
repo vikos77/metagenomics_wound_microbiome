@@ -1,0 +1,156 @@
+Genus	SRR10803250	SRR10803271	SRR10803282	Total	Percent_of_assigned
+Pseudomonas	79176	36199	71	115446	26.1
+Acinetobacter	110757	17	2	110776	25.0
+Burkholderia-Caballeronia-Paraburkholderia	43304	4208	36	47548	10.7
+Achromobacter	29432	22	438	29892	6.8
+Solanum melongena (eggplant)	28697	71	0	28768	6.5
+Escherichia-Shigella	15743	1237	16	16996	3.8
+Blautia	16905	0	0	16905	3.8
+GKS98 freshwater group	12393	517	35	12945	2.9
+Dermabacter	540	35	12312	12887	2.9
+Stenotrophomonas	7148	54	62	7264	1.6
+Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium	5096	770	20	5886	1.3
+Alcaligenes	4080	1496	30	5606	1.3
+Corynebacterium 1	644	855	4025	5524	1.2
+Bacillus	3246	394	4	3644	0.8
+Gemella	241	44	3299	3584	0.8
+Staphylococcus	3291	198	33	3522	0.8
+Parvimonas	62	15	2236	2313	0.5
+Corynebacterium	40	0	1979	2019	0.5
+uncultured	1143	546	27	1716	0.4
+Klebsiella	757	41	19	817	0.2
+uncultured bacterium	615	141	18	774	0.2
+Methylobacterium	191	112	450	753	0.2
+Aquabacterium	47	402	0	449	0.1
+Streptococcus	379	5	14	398	0.1
+Morganella	364	0	2	366	0.1
+Aeromonas	120	202	27	349	0.1
+Microbacterium	334	4	0	338	0.1
+Finegoldia	180	49	9	238	0.1
+Cutibacterium	124	95	3	222	0.1
+Enterobacter	199	8	0	207	0.0
+Ralstonia	198	2	4	204	0.0
+Proteus	126	77	0	203	0.0
+Anaeromyxobacter	203	0	0	203	0.0
+Sphingomonas	167	33	0	200	0.0
+Paracoccus	195	0	0	195	0.0
+Phyllobacterium	129	3	48	180	0.0
+Enterococcus	19	2	134	155	0.0
+Bacteroides	133	8	2	143	0.0
+uncultured delta proteobacterium	3	137	0	140	0.0
+Tepidimonas	50	78	0	128	0.0
+Clostridium sensu stricto 1	53	41	28	122	0.0
+Schlegelella	100	20	0	120	0.0
+Desulfocapsa	118	0	0	118	0.0
+Bradyrhizobium	99	17	0	116	0.0
+Mesorhizobium	87	18	11	116	0.0
+Mycobacterium	101	4	2	107	0.0
+Pseudoalteromonas	73	6	0	79	0.0
+Barnesiella	78	0	0	78	0.0
+Rheinheimera	64	12	0	76	0.0
+Delftia	66	9	0	75	0.0
+Cobetia	74	0	0	74	0.0
+Citrobacter	67	0	2	69	0.0
+uncultured Actinomycetales bacterium	66	0	0	66	0.0
+Fusobacterium	58	2	0	60	0.0
+Noviherbaspirillum	0	0	56	56	0.0
+Methylomicrobium	31	19	0	50	0.0
+Kocuria	34	15	0	49	0.0
+Micrococcus	47	0	0	47	0.0
+Porphyromonas	46	0	0	46	0.0
+Nevskia	15	5	26	46	0.0
+Salmonella	33	13	0	46	0.0
+Photobacterium	38	0	0	38	0.0
+Vulcaniibacterium	33	4	0	37	0.0
+Haemophilus	31	3	0	34	0.0
+Salinibacter	33	0	0	33	0.0
+Prevotella	20	11	2	33	0.0
+Caulobacter	29	0	0	29	0.0
+Herbaspirillum	3	0	25	28	0.0
+Afipia	26	0	0	26	0.0
+Phenylobacterium	10	14	2	26	0.0
+Ornithinicoccus	24	0	0	24	0.0
+Paucibacter	22	0	0	22	0.0
+metagenome	5	16	0	21	0.0
+Bosea	2	0	19	21	0.0
+Thauera	10	0	10	20	0.0
+Dermacoccus	19	0	0	19	0.0
+Johnsonella	18	0	0	18	0.0
+Enhydrobacter	16	0	0	16	0.0
+Anaerococcus	16	0	0	16	0.0
+Serratia	4	0	12	16	0.0
+Pannonibacter	15	0	0	15	0.0
+Azospirillum	15	0	0	15	0.0
+uncultured Corynebacterium sp.	15	0	0	15	0.0
+Idiomarina	13	0	0	13	0.0
+Tepidiphilus	13	0	0	13	0.0
+Brevibacterium	13	0	0	13	0.0
+Paenibacillus	6	4	3	13	0.0
+Tepidibacter	6	6	0	12	0.0
+Bartonella	10	0	0	10	0.0
+Cupriavidus	10	0	0	10	0.0
+Rhodococcus	10	0	0	10	0.0
+Peptostreptococcus	10	0	0	10	0.0
+Acidibacter	9	0	0	9	0.0
+Candidatus Alysiosphaera	8	0	0	8	0.0
+Janibacter	8	0	0	8	0.0
+Sphingobium	8	0	0	8	0.0
+Pantoea	8	0	0	8	0.0
+Nordella	2	6	0	8	0.0
+Paenalcaligenes	0	8	0	8	0.0
+Veillonella	7	0	0	7	0.0
+Nocardioides	7	0	0	7	0.0
+Lactococcus	7	0	0	7	0.0
+Bdellovibrio	6	0	0	6	0.0
+Ezakiella	6	0	0	6	0.0
+Methyloversatilis	6	0	0	6	0.0
+Comamonas	6	0	0	6	0.0
+Helcococcus	0	5	0	5	0.0
+hgcI clade	4	0	0	4	0.0
+Ornithinimicrobium	4	0	0	4	0.0
+Novosphingobium	4	0	0	4	0.0
+Dolosigranulum	4	0	0	4	0.0
+Dietzia	4	0	0	4	0.0
+Neisseria	4	0	0	4	0.0
+Phaselicystis	4	0	0	4	0.0
+Mitsuaria	4	0	0	4	0.0
+Phreatobacter	4	0	0	4	0.0
+Acidovorax	4	0	0	4	0.0
+Arthrobacter	4	0	0	4	0.0
+Ochrobactrum	0	0	4	4	0.0
+Aggregatibacter	3	0	0	3	0.0
+Candidatus Koribacter	3	0	0	3	0.0
+Lautropia	3	0	0	3	0.0
+Alkanindiges	3	0	0	3	0.0
+Methylophilus	3	0	0	3	0.0
+Saccharopolyspora	0	3	0	3	0.0
+Gemmata	0	3	0	3	0.0
+Alkanibacter	0	0	3	3	0.0
+Solirubrobacter	2	0	0	2	0.0
+Kytococcus	2	0	0	2	0.0
+Halothiobacillus	2	0	0	2	0.0
+Flexivirga sp. ID2601S	2	0	0	2	0.0
+Tsukamurella	2	0	0	2	0.0
+Prevotella 7	2	0	0	2	0.0
+Lachnospiraceae UCG-008	2	0	0	2	0.0
+uncultured Thermomicrobium sp.	2	0	0	2	0.0
+Moraxella	2	0	0	2	0.0
+Macrococcus	2	0	0	2	0.0
+Alloprevotella	2	0	0	2	0.0
+Thiothrix	2	0	0	2	0.0
+Chitinophaga	2	0	0	2	0.0
+Rubrobacter	2	0	0	2	0.0
+Tannerella	2	0	0	2	0.0
+Actinomycetospora	2	0	0	2	0.0
+Campylobacter	2	0	0	2	0.0
+Variovorax	2	0	0	2	0.0
+Cloacibacterium	2	0	0	2	0.0
+Lawsonella	2	0	0	2	0.0
+Weissella	2	0	0	2	0.0
+Erysipelothrix	2	0	0	2	0.0
+Dechlorosoma	2	0	0	2	0.0
+Blastococcus	2	0	0	2	0.0
+UKL13-1	0	2	0	2	0.0
+Brenneria	0	0	2	2	0.0
+Exiguobacterium	0	0	2	2	0.0
+Aneurinibacillus	0	0	2	2	0.0

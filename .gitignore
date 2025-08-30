@@ -1,0 +1,23 @@
+# Large genomic data files
+*.fna
+*.fasta
+*.fas
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.sam
+*.bam
+*.bai
+*.vcf
+*.vcf.gz
+*.gff
+*.gff3
+*.gtf
+
+raw_data/
+
+# Compressed files (unless specifically needed)
+*.tar.gz
+*.zip
+*.tar.bz
