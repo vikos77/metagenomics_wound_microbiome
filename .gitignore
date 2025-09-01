@@ -14,10 +14,13 @@
 *.gff
 *.gff3
 *.gtf
+*.qza
+*.qzv
+*.html
 
 raw_data/
 /home/vicky/metegenomics_wound_microbiome/results/databases
-
+/results/fastqc_reports
 
 # Compressed files (unless specifically needed)
 *.tar.gz

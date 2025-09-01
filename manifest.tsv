@@ -1,0 +1,4 @@
+sample-id	absolute-filepath	direction
+SRR10803250	/home/vicky/metegenomics_wound_microbiome/results/trimmed_reads/SRR10803250_trimmed.fastq	forward
+SRR10803271	/home/vicky/metegenomics_wound_microbiome/results/trimmed_reads/SRR10803271_trimmed.fastq	forward
+SRR10803282	/home/vicky/metegenomics_wound_microbiome/results/trimmed_reads/SRR10803282_trimmed.fastq	forward
