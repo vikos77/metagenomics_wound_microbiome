@@ -37,14 +37,18 @@ esearch -db sra -query "PRJNA596613" | efetch -format runinfo > project_runinfo.
 head -5 project_runinfo.csv
 wc -l project_runinfo.csv  # Check total samples
 
-# Select representative samples for testing (optional - or download all)
-# For testing: download 3 samples with different read counts
-cd raw_data
+# Extract just the Run IDs (first column after header)
+tail -n +2 project_runinfo.csv | cut -d',' -f1 > all_run_ids.txt
 
-# Download specific samples (replace with your chosen SRA IDs)
-fasterq-dump SRR10803282  # low reads (~55K)
-fasterq-dump SRR10803271  # medium reads (~200K)  
-fasterq-dump SRR10803250  # high reads (~600K)
+# Check how many samples we have
+echo "Total samples to download: $(wc -l < all_run_ids.txt)"
+
+#Activate and execute the download script(data_download.sh) in the root directory
+chmod +x data_download.sh
+
+./data_download.sh
+
+cd raw_data
 
 # Verify downloads
 ls -lh
