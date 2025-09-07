@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Calculate assignment statistics
 total_reads_all = 0
 total_reads_assigned = 0

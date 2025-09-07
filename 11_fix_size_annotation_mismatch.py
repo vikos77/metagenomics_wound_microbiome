@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Create base name to cluster mapping (ignoring size annotations)
 base_to_cluster = {}
 with open('results/vsearch_analysis/clusters.uc', 'r') as f:
