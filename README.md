@@ -115,7 +115,7 @@ Both methods successfully identified the same clinically relevant pathogens:
 │   ├── vsearch_pipeline_sop.md          # Complete VSEARCH workflow
 │   └── qiime2_pipeline_sop.md           # Complete QIIME2 workflow
 ├── scripts/
-│   ├── visualization_comparison.py          # Method comparison plots
+│   ├── visualization_comparison.py      # Method comparison plots
 │   └── analysis_scripts                 # Helper functions
 ├── results/
 │   ├── vsearch_analysis/               # VSEARCH outputs
@@ -143,18 +143,12 @@ Both methods successfully identified the same clinically relevant pathogens:
 - BLAST+ suite
 - Trimmomatic, FastQC
 
-### Hardware Recommendations
-- 16+ GB RAM
-- 750+ GB storage
-- 8+ CPU cores
-- Internet connection for database downloads
-
 ## Getting Started
 
 1. **Clone this repository**
    ```bash
-   git clone https://github.com/your-username/diabetic-wound-microbiome-analysis.git
-   cd diabetic-wound-microbiome-analysis
+   git clone https://github.com/vikos77/metagenomics_wound_microbiome.git
+   cd metagenomics_wound_microbiome
    ```
 
 2. **Follow the SOPs**
@@ -167,8 +161,8 @@ Both methods successfully identified the same clinically relevant pathogens:
 
 4. **Generate visualizations**
    ```bash
-   cd results/visualizations
-   python visualize_comparison.py
+   cd scripts
+   python visualization_comparison.py
    ```
 
 ## Citation
@@ -179,7 +173,7 @@ If you use this pipeline in your research, please cite:
 Jnana, A., et al. (2020). Microbial community distribution and core microbiome in successive wound grades of individuals with diabetic foot ulcers. *Applied and Environmental Microbiology*, 86(6), e02608-19.
 
 **This Repository:**
-Vigneshwaran Muthuraman. (2024). Diabetic Wound Microbiome Analysis: VSEARCH vs QIIME2 Comparison. GitHub repository: https://github.com/vikos77/diabetic-wound-microbiome-analysis
+Vigneshwaran Muthuraman. (2024). Diabetic Wound Microbiome Analysis: VSEARCH vs QIIME2 Comparison. GitHub repository: https://github.com/vikos77/metagenomics_wound_microbiome
 
 ---
 
