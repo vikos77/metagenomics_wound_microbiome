@@ -78,13 +78,15 @@ done
 conda install -c bioconda trimmomatic
 
 ```bash
-# Quality trim sequences using Trimmomatic
-for sample in SRR10803282 SRR10803271 SRR10803250; do
+# Loop through all samples listed in all_run_ids.txt
+while read sample; do
     echo "Processing $sample..."
     trimmomatic SE raw_data/${sample}.fastq \
         results/trimmed_reads/${sample}_trimmed.fastq \
         LEADING:3 TRAILING:3 SLIDINGWINDOW:4:20 MINLEN:100
-done
+done < all_run_ids.txt
+
+echo "Trimming complete for all samples!"
 
 # Compare file sizes before/after trimming
 echo "Original sizes:"
@@ -98,21 +100,17 @@ ls -lh results/trimmed_reads/
 ```bash
 cd results/vsearch_analysis
 
-# Convert each sample to FASTA with proper sample labeling
-vsearch --fastq_filter ../trimmed_reads/SRR10803250_trimmed.fastq \
-    --fastaout SRR10803250.fasta \
-    --relabel SRR10803250.
+while read sample; do
+    echo "Processing $sample..."
+    vsearch --fastq_filter ../trimmed_reads/${sample}_trimmed.fastq \
+        --fastaout ${sample}.fasta \
+        --relabel ${sample}.
+done < ../../all_run_ids.txt
 
-vsearch --fastq_filter ../trimmed_reads/SRR10803271_trimmed.fastq \
-    --fastaout SRR10803271.fasta \
-    --relabel SRR10803271.
-
-vsearch --fastq_filter ../trimmed_reads/SRR10803282_trimmed.fastq \
-    --fastaout SRR10803282.fasta \
-    --relabel SRR10803282.
+echo "All samples converted to FASTA!"
 
 # Combine all samples
-cat SRR10803250.fasta SRR10803271.fasta SRR10803282.fasta > all_samples_combined.fasta
+cat *.fasta > all_samples_combined.fasta
 
 cd ../..  # Back to project root
 ```
