@@ -1,74 +1,555 @@
-# Create comparative visualization script
-import matplotlib.pyplot as plt
-import seaborn as sns
+#!/usr/bin/env python3
+"""
+Comprehensive Metagenomics Analysis Visualization Script
+Compares VSEARCH and QIIME2 approaches across 122 diabetic wound samples
+"""
+
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import pearsonr, spearmanr
+from scipy.spatial.distance import pdist, squareform
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import warnings
+warnings.filterwarnings('ignore')
 
-# Set style for publication-quality figures
-plt.style.use('default')
+# Set plotting style
+plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
-plt.rcParams.update({'font.size': 12, 'figure.dpi': 300})
 
-# Read VSEARCH results
-vsearch_data = []
-with open('vsearch_genus_summary.txt', 'r') as f:
-    header = f.readline().strip().split('\t')
-    for line in f:
-        parts = line.strip().split('\t')
-        if len(parts) >= 6:
-            genus = parts[0]
-            total = int(parts[4])
-            percent = float(parts[5])
-            vsearch_data.append([genus, total, percent, 'VSEARCH'])
+VSEARCH_COLOR = '#1f77b4'      # Blue
+QIIME2_COLOR = '#ff7f0e'       # Orange
+SHARED_COLOR = '#2ca02c'       # Green
+VSEARCH_ONLY_COLOR = '#17becf' # Light blue
+QIIME2_ONLY_COLOR = '#d62728'  # Red
 
-# Read QIIME2 results
-qiime2_data = []
-with open('qiime2_genus_summary.txt', 'r') as f:
-    header = f.readline().strip().split('\t')
-    for line in f:
-        parts = line.strip().split('\t')
-        if len(parts) >= 5:
-            genus = parts[0]
-            total = int(parts[4])
-            percent = float(parts[5])
-            qiime2_data.append([genus, total, percent, 'QIIME2'])
+class MetagenomicsComparison:
+    def __init__(self, vsearch_file, qiime2_file):
+        """Initialize with genus summary files from both methods"""
+        self.vsearch_data = self.load_genus_data(vsearch_file, 'VSEARCH')
+        self.qiime2_data = self.load_genus_data(qiime2_file, 'QIIME2')
+        self.merged_data = self.merge_datasets()
+        
+    def load_genus_data(self, filename, method_name):
+        """Load and process genus abundance data"""
+        df = pd.read_csv(filename, sep='\t', index_col=0)
+        
+        # Remove non-sample columns (Total, Percent, etc.)
+        sample_cols = [col for col in df.columns if col.startswith('SRR')]
+        genus_abundance = df[sample_cols].copy()
+        
+        # Convert to relative abundances (percentages)
+        genus_abundance_rel = genus_abundance.div(genus_abundance.sum(axis=0), axis=1) * 100
+        
+        print(f"{method_name} - Samples: {len(sample_cols)}, Genera: {len(genus_abundance)}")
+        return genus_abundance_rel
+    
+    def merge_datasets(self):
+        """Merge VSEARCH and QIIME2 data for comparison"""
+        # Get common samples
+        common_samples = list(set(self.vsearch_data.columns) & set(self.qiime2_data.columns))
+        
+        # Get common genera
+        common_genera = list(set(self.vsearch_data.index) & set(self.qiime2_data.index))
+        
+        # Create merged dataset
+        merged = pd.DataFrame()
+        for genus in common_genera:
+            for sample in common_samples:
+                vsearch_val = self.vsearch_data.loc[genus, sample] if genus in self.vsearch_data.index else 0
+                qiime2_val = self.qiime2_data.loc[genus, sample] if genus in self.qiime2_data.index else 0
+                
+                merged = pd.concat([merged, pd.DataFrame({
+                    'Genus': [genus],
+                    'Sample': [sample], 
+                    'VSEARCH': [vsearch_val],
+                    'QIIME2': [qiime2_val]
+                })], ignore_index=True)
+        
+        print(f"Merged data - Common samples: {len(common_samples)}, Common genera: {len(common_genera)}")
+        return merged
+    
+    def plot_method_correlation(self):
+        """Create correlation plots between methods"""
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        
+        # Overall correlation (log scale)
+        ax1 = axes[0, 0]
+        x = np.log10(self.merged_data['VSEARCH'] + 0.01)
+        y = np.log10(self.merged_data['QIIME2'] + 0.01)
+        
+        ax1.scatter(x, y, alpha=0.5, s=20)
+        ax1.plot([x.min(), x.max()], [y.min(), y.max()], 'r--', alpha=0.8)
+        
+        # Calculate correlation
+        mask = (self.merged_data['VSEARCH'] > 0) & (self.merged_data['QIIME2'] > 0)
+        if mask.sum() > 0:
+            corr_val, p_val = pearsonr(x[mask], y[mask])
+            ax1.text(0.05, 0.95, f'r = {corr_val:.3f}\np = {p_val:.2e}', 
+                    transform=ax1.transAxes, bbox=dict(boxstyle="round", facecolor='white'))
+        
+        ax1.set_xlabel('VSEARCH Abundance (log10 %)')
+        ax1.set_ylabel('QIIME2 Abundance (log10 %)')
+        ax1.set_title('Overall Method Correlation')
+        
+        # Top 20 genera correlation
+        ax2 = axes[0, 1]
+        top_genera = self.merged_data.groupby('Genus')[['VSEARCH', 'QIIME2']].sum().sum(axis=1).nlargest(20).index
+        top_data = self.merged_data[self.merged_data['Genus'].isin(top_genera)]
+        
+        ax2.scatter(top_data['VSEARCH'], top_data['QIIME2'], alpha=0.6, s=30)
+        ax2.set_xlabel('VSEARCH Abundance (%)')
+        ax2.set_ylabel('QIIME2 Abundance (%)')
+        ax2.set_title('Top 20 Genera Correlation')
+        
+        # Genus-level correlation heatmap
+        ax3 = axes[1, 0]
+        genus_corr = []
+        genus_names = []
+        
+        for genus in top_genera[:15]:  # Top 15 for visibility
+            genus_data = self.merged_data[self.merged_data['Genus'] == genus]
+            if len(genus_data) > 5:  # Need sufficient data points
+                corr, _ = pearsonr(genus_data['VSEARCH'], genus_data['QIIME2'])
+                genus_corr.append(corr)
+                genus_names.append(genus)
+        
+        if genus_corr:
+            bars = ax3.barh(range(len(genus_names)), genus_corr)
+            ax3.set_yticks(range(len(genus_names)))
+            ax3.set_yticklabels(genus_names, fontsize=8)
+            ax3.set_xlabel('Pearson Correlation')
+            ax3.set_title('Genus-level Method Correlations')
+            ax3.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+            
+            # Color bars by correlation strength
+            for i, bar in enumerate(bars):
+                if genus_corr[i] > 0.5:
+                    bar.set_color('green')
+                elif genus_corr[i] > 0:
+                    bar.set_color('orange')
+                else:
+                    bar.set_color('red')
+        
+        # Sample correlation distribution
+        ax4 = axes[1, 1]
+        sample_corrs = []
+        
+        for sample in self.merged_data['Sample'].unique():
+            sample_data = self.merged_data[self.merged_data['Sample'] == sample]
+            mask = (sample_data['VSEARCH'] > 0) | (sample_data['QIIME2'] > 0)
+            if mask.sum() > 5:
+                corr, _ = spearmanr(sample_data['VSEARCH'], sample_data['QIIME2'])
+                if not np.isnan(corr):
+                    sample_corrs.append(corr)
+        
+        if sample_corrs:
+            ax4.hist(sample_corrs, bins=20, alpha=0.7, edgecolor='black')
+            ax4.axvline(x=np.mean(sample_corrs), color='red', linestyle='--', 
+                       label=f'Mean = {np.mean(sample_corrs):.3f}')
+            ax4.set_xlabel('Spearman Correlation')
+            ax4.set_ylabel('Number of Samples')
+            ax4.set_title('Sample-level Method Correlations')
+            ax4.legend()
+        
+        plt.tight_layout()
+        plt.savefig('method_correlation_analysis.png', dpi=300, bbox_inches='tight')
+        plt.show()
+    
+    def plot_core_microbiome(self):
+        """Analyze and visualize core microbiome"""
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        
+        # Core genera detection by method
+        ax1 = axes[0, 0]
+        
+        # Calculate prevalence for each method
+        vsearch_prev = (self.vsearch_data > 0.1).sum(axis=1) / len(self.vsearch_data.columns) * 100
+        qiime2_prev = (self.qiime2_data > 0.1).sum(axis=1) / len(self.qiime2_data.columns) * 100
+        
+        # Get genera detected in >50% of samples by either method
+        core_genera_vs = vsearch_prev[vsearch_prev > 50].index
+        core_genera_q2 = qiime2_prev[qiime2_prev > 50].index
+        
+        # Venn diagram data
+        vs_only = len(set(core_genera_vs) - set(core_genera_q2))
+        q2_only = len(set(core_genera_q2) - set(core_genera_vs))
+        shared = len(set(core_genera_vs) & set(core_genera_q2))
+        
+        # Bar plot of core genera counts
+        categories = ['VSEARCH\nOnly', 'Shared', 'QIIME2\nOnly']
+        counts = [vs_only, shared, q2_only]
+        colors = ['lightblue', 'green', 'lightcoral']
+        
+        bars = ax1.bar(categories, counts, color=colors)
+        ax1.set_ylabel('Number of Core Genera')
+        ax1.set_title('Core Genera Detection\n(>50% sample prevalence)')
+        ax1.set_ylim(0, max(counts) * 1.2)
+        
+        # Add count labels on bars
+        for bar, count in zip(bars, counts):
+            ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
+                    str(count), ha='center', va='bottom')
+        
+        # Top abundant genera comparison
+        ax2 = axes[0, 1]
+        
+        # Get top 15 genera by mean abundance
+        vsearch_means = self.vsearch_data.mean(axis=1).nlargest(15)
+        qiime2_means = self.qiime2_data.mean(axis=1).nlargest(15)
+        
+        top_genera = list(set(vsearch_means.index) | set(qiime2_means.index))[:15]
+        
+        x_pos = np.arange(len(top_genera))
+        width = 0.35
+        
+        vs_vals = [vsearch_means.get(g, 0) for g in top_genera]
+        q2_vals = [qiime2_means.get(g, 0) for g in top_genera]
+        
+        ax2.bar(x_pos - width/2, vs_vals, width, label='VSEARCH', alpha=0.8)
+        ax2.bar(x_pos + width/2, q2_vals, width, label='QIIME2', alpha=0.8)
+        
+        ax2.set_xlabel('Genera')
+        ax2.set_ylabel('Mean Abundance (%)')
+        ax2.set_title('Top Genera Abundance Comparison')
+        ax2.set_xticks(x_pos)
+        ax2.set_xticklabels(top_genera, rotation=45, ha='right', fontsize=8)
+        ax2.legend()
+        
+        # Prevalence scatter plot
+        ax3 = axes[1, 0]
+        
+        # Calculate prevalences for all genera
+        all_genera = list(set(self.vsearch_data.index) | set(self.qiime2_data.index))
+        
+        vs_prevs = []
+        q2_prevs = []
+        
+        for genus in all_genera:
+            vs_prev = ((self.vsearch_data.loc[genus] > 0.1).sum() / len(self.vsearch_data.columns) * 100) if genus in self.vsearch_data.index else 0
+            q2_prev = ((self.qiime2_data.loc[genus] > 0.1).sum() / len(self.qiime2_data.columns) * 100) if genus in self.qiime2_data.index else 0
+            
+            vs_prevs.append(vs_prev)
+            q2_prevs.append(q2_prev)
+        
+        ax3.scatter(vs_prevs, q2_prevs, alpha=0.6, s=30)
+        ax3.plot([0, 100], [0, 100], 'r--', alpha=0.8)
+        ax3.axhline(y=50, color='gray', linestyle=':', alpha=0.5)
+        ax3.axvline(x=50, color='gray', linestyle=':', alpha=0.5)
+        
+        ax3.set_xlabel('VSEARCH Prevalence (%)')
+        ax3.set_ylabel('QIIME2 Prevalence (%)')
+        ax3.set_title('Genus Prevalence Comparison')
+        
+        # Wound-associated genera focus
+        ax4 = axes[1, 1]
+        
+        wound_genera = ['Acinetobacter', 'Pseudomonas', 'Burkholderia-Caballeronia-Paraburkholderia', 
+                       'Alcaligenes', 'Achromobacter', 'Staphylococcus', 'Streptococcus', 'Enterococcus']
+        
+        wound_data = []
+        for genus in wound_genera:
+            vs_mean = self.vsearch_data.loc[genus].mean() if genus in self.vsearch_data.index else 0
+            q2_mean = self.qiime2_data.loc[genus].mean() if genus in self.qiime2_data.index else 0
+            wound_data.append([genus, vs_mean, q2_mean])
+        
+        wound_df = pd.DataFrame(wound_data, columns=['Genus', 'VSEARCH', 'QIIME2'])
+        
+        x_pos = np.arange(len(wound_genera))
+        ax4.bar(x_pos - width/2, wound_df['VSEARCH'], width, label='VSEARCH', alpha=0.8)
+        ax4.bar(x_pos + width/2, wound_df['QIIME2'], width, label='QIIME2', alpha=0.8)
+        
+        ax4.set_xlabel('Wound-Associated Genera')
+        ax4.set_ylabel('Mean Abundance (%)')
+        ax4.set_title('Wound Pathogen Detection')
+        ax4.set_xticks(x_pos)
+        ax4.set_xticklabels([g.split('-')[0] for g in wound_genera], rotation=45, ha='right', fontsize=8)
+        ax4.legend()
+        
+        plt.tight_layout()
+        plt.savefig('core_microbiome_analysis.png', dpi=300, bbox_inches='tight')
+        plt.show()
+    
+    def plot_diversity_analysis(self):
+        """Analyze alpha and beta diversity"""
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        
+        # Alpha diversity comparison
+        ax1 = axes[0, 0]
+        
+        # Calculate Shannon diversity for each sample
+        def shannon_diversity(abundances):
+            abundances = abundances[abundances > 0]
+            proportions = abundances / abundances.sum()
+            return -np.sum(proportions * np.log(proportions))
+        
+        vs_shannon = [shannon_diversity(self.vsearch_data[col]) for col in self.vsearch_data.columns]
+        q2_shannon = [shannon_diversity(self.qiime2_data[col]) for col in self.qiime2_data.columns]
+        
+        common_samples = list(set(self.vsearch_data.columns) & set(self.qiime2_data.columns))
+        vs_shannon_common = [shannon_diversity(self.vsearch_data[col]) for col in common_samples]
+        q2_shannon_common = [shannon_diversity(self.qiime2_data[col]) for col in common_samples]
+        
+        ax1.scatter(vs_shannon_common, q2_shannon_common, alpha=0.6)
+        ax1.plot([min(vs_shannon_common), max(vs_shannon_common)], 
+                [min(vs_shannon_common), max(vs_shannon_common)], 'r--', alpha=0.8)
+        
+        corr, p_val = pearsonr(vs_shannon_common, q2_shannon_common)
+        ax1.text(0.05, 0.95, f'r = {corr:.3f}\np = {p_val:.2e}', 
+                transform=ax1.transAxes, bbox=dict(boxstyle="round", facecolor='white'))
+        
+        ax1.set_xlabel('VSEARCH Shannon Diversity')
+        ax1.set_ylabel('QIIME2 Shannon Diversity')
+        ax1.set_title('Alpha Diversity Comparison')
+        
+        # Richness comparison
+        ax2 = axes[0, 1]
+        
+        vs_richness = [(self.vsearch_data[col] > 0).sum() for col in common_samples]
+        q2_richness = [(self.qiime2_data[col] > 0).sum() for col in common_samples]
+        
+        ax2.scatter(vs_richness, q2_richness, alpha=0.6)
+        ax2.plot([min(vs_richness), max(vs_richness)], 
+                [min(vs_richness), max(vs_richness)], 'r--', alpha=0.8)
+        
+        corr, p_val = pearsonr(vs_richness, q2_richness)
+        ax2.text(0.05, 0.95, f'r = {corr:.3f}\np = {p_val:.2e}', 
+                transform=ax2.transAxes, bbox=dict(boxstyle="round", facecolor='white'))
+        
+        ax2.set_xlabel('VSEARCH Genus Richness')
+        ax2.set_ylabel('QIIME2 Genus Richness')
+        ax2.set_title('Genus Richness Comparison')
+        
+        # Diversity distribution
+        ax3 = axes[1, 0]
+        
+        ax3.hist(vs_shannon, bins=20, alpha=0.5, label='VSEARCH', density=True)
+        ax3.hist(q2_shannon, bins=20, alpha=0.5, label='QIIME2', density=True)
+        ax3.axvline(x=np.mean(vs_shannon), color='blue', linestyle='--', alpha=0.8)
+        ax3.axvline(x=np.mean(q2_shannon), color='orange', linestyle='--', alpha=0.8)
+        
+        ax3.set_xlabel('Shannon Diversity')
+        ax3.set_ylabel('Density')
+        ax3.set_title('Diversity Distribution')
+        ax3.legend()
+        
+        # PCA comparison
+        ax4 = axes[1, 1]
+        
+        # Prepare data for PCA
+        common_genera = list(set(self.vsearch_data.index) & set(self.qiime2_data.index))
+        
+        vs_pca_data = self.vsearch_data.loc[common_genera, common_samples].T
+        q2_pca_data = self.qiime2_data.loc[common_genera, common_samples].T
+        
+        # Perform PCA
+        pca = PCA(n_components=2)
+        vs_pca = pca.fit_transform(vs_pca_data.fillna(0))
+        q2_pca = pca.fit_transform(q2_pca_data.fillna(0))
+        
+        ax4.scatter(vs_pca[:, 0], vs_pca[:, 1], alpha=0.6, label='VSEARCH', s=30)
+        ax4.scatter(q2_pca[:, 0], q2_pca[:, 1], alpha=0.6, label='QIIME2', s=30)
+        
+        ax4.set_xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.1%} variance)')
+        ax4.set_ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)')
+        ax4.set_title('PCA - Method Comparison')
+        ax4.legend()
+        
+        plt.tight_layout()
+        plt.savefig('diversity_analysis.png', dpi=300, bbox_inches='tight')
+        plt.show()
+    
+    def plot_method_sensitivity(self):
+        """Analyze method sensitivity and detection thresholds"""
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        
+        # Detection threshold analysis
+        ax1 = axes[0, 0]
+        
+        thresholds = [0.01, 0.1, 0.5, 1.0, 2.0, 5.0]
+        vs_detections = []
+        q2_detections = []
+        
+        for threshold in thresholds:
+            vs_det = (self.vsearch_data > threshold).sum().sum()
+            q2_det = (self.qiime2_data > threshold).sum().sum()
+            vs_detections.append(vs_det)
+            q2_detections.append(q2_det)
+        
+        ax1.plot(thresholds, vs_detections, 'o-', label='VSEARCH', linewidth=3, 
+                markersize=8, color=VSEARCH_COLOR, markeredgecolor='black', markeredgewidth=1)
+        ax1.plot(thresholds, q2_detections, 's-', label='QIIME2', linewidth=3, 
+                markersize=8, color=QIIME2_COLOR, markeredgecolor='black', markeredgewidth=1)
+        
+        ax1.set_xlabel('Detection Threshold (%)', fontweight='bold')
+        ax1.set_ylabel('Number of Detections', fontweight='bold')
+        ax1.set_title('Method Sensitivity Analysis', fontweight='bold', fontsize=14)
+        ax1.set_xscale('log')
+        ax1.legend(fontsize=12, frameon=True, fancybox=True, shadow=True)
+        ax1.grid(True, alpha=0.3)
+        
+        # Low abundance genera detection
+        ax2 = axes[0, 1]
+        
+        # Focus on genera with mean abundance < 1%
+        vs_low = self.vsearch_data[self.vsearch_data.mean(axis=1) < 1.0]
+        q2_low = self.qiime2_data[self.qiime2_data.mean(axis=1) < 1.0]
+        
+        vs_low_count = len(vs_low)
+        q2_low_count = len(q2_low)
+        shared_low = len(set(vs_low.index) & set(q2_low.index))
+        
+        categories = ['VSEARCH\nRare Genera', 'QIIME2\nRare Genera', 'Shared\nRare Genera']
+        counts = [vs_low_count, q2_low_count, shared_low]
+        colors = [VSEARCH_COLOR, QIIME2_COLOR, SHARED_COLOR]
+        
+        bars = ax2.bar(categories, counts, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+        ax2.set_ylabel('Number of Genera', fontweight='bold')
+        ax2.set_title('Low Abundance Genera Detection\n(<1% mean abundance)', fontweight='bold', fontsize=14)
+        ax2.set_ylim(0, max(counts) * 1.2)  # Add padding for number visibility
+        
+        for bar, count in zip(bars, counts):
+            ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(counts)*0.02, 
+                    str(count), ha='center', va='bottom', fontweight='bold', fontsize=12)
+        
+        ax2.grid(True, alpha=0.3)
+        
+        # Sample-level detection comparison
+        ax3 = axes[1, 0]
+        
+        common_samples = list(set(self.vsearch_data.columns) & set(self.qiime2_data.columns))
+        
+        vs_sample_richness = [(self.vsearch_data[col] > 0.1).sum() for col in common_samples]
+        q2_sample_richness = [(self.qiime2_data[col] > 0.1).sum() for col in common_samples]
+        
+        difference = np.array(vs_sample_richness) - np.array(q2_sample_richness)
+        
+        ax3.hist(difference, bins=20, alpha=0.7, color=SHARED_COLOR, edgecolor='black', linewidth=1)
+        ax3.axvline(x=0, color='red', linestyle='--', alpha=0.8, linewidth=2, label='No Difference')
+        mean_diff = np.mean(difference)
+        ax3.axvline(x=mean_diff, color='purple', linestyle='--', alpha=0.8, linewidth=2,
+                   label=f'Mean = {mean_diff:.1f}')
+        
+        ax3.set_xlabel('Richness Difference (VSEARCH - QIIME2)', fontweight='bold')
+        ax3.set_ylabel('Number of Samples', fontweight='bold')
+        ax3.set_title('Per-Sample Richness Differences', fontweight='bold', fontsize=14)
+        ax3.legend(fontsize=11)
+        ax3.grid(True, alpha=0.3)
+        
+        # Abundance range comparison
+        ax4 = axes[1, 1]
+        
+        # Calculate coefficient of variation for each genus
+        vs_cv = (self.vsearch_data.std(axis=1) / (self.vsearch_data.mean(axis=1) + 0.01))
+        q2_cv = (self.qiime2_data.std(axis=1) / (self.qiime2_data.mean(axis=1) + 0.01))
+        
+        # Focus on genera present in both datasets
+        common_genera = list(set(self.vsearch_data.index) & set(self.qiime2_data.index))
+        
+        vs_cv_common = [vs_cv.loc[g] for g in common_genera if g in vs_cv.index]
+        q2_cv_common = [q2_cv.loc[g] for g in common_genera if g in q2_cv.index]
+        
+        ax4.scatter(vs_cv_common, q2_cv_common, alpha=0.6, s=40, color=SHARED_COLOR,
+                   edgecolors='black', linewidth=0.5)
+        max_cv = max(max(vs_cv_common), max(q2_cv_common))
+        ax4.plot([0, max_cv], [0, max_cv], color='red', linestyle='--', alpha=0.8, linewidth=2,
+                label='Perfect Agreement')
+        
+        ax4.set_xlabel('VSEARCH Coefficient of Variation', fontweight='bold')
+        ax4.set_ylabel('QIIME2 Coefficient of Variation', fontweight='bold')
+        ax4.set_title('Abundance Variability Comparison', fontweight='bold', fontsize=14)
+        ax4.legend(fontsize=10)
+        ax4.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig('method_sensitivity_analysis.png', dpi=300, bbox_inches='tight')
+        plt.show()
+    
+    def generate_summary_report(self):
+        """Generate a comprehensive summary report"""
+        print("="*60)
+        print("METAGENOMICS METHOD COMPARISON SUMMARY REPORT")
+        print("="*60)
+        
+        # Basic statistics
+        print(f"\nDATASET OVERVIEW:")
+        print(f"VSEARCH - Samples: {len(self.vsearch_data.columns)}, Genera: {len(self.vsearch_data)}")
+        print(f"QIIME2 - Samples: {len(self.qiime2_data.columns)}, Genera: {len(self.qiime2_data)}")
+        
+        common_samples = list(set(self.vsearch_data.columns) & set(self.qiime2_data.columns))
+        common_genera = list(set(self.vsearch_data.index) & set(self.qiime2_data.index))
+        print(f"Common samples: {len(common_samples)}")
+        print(f"Common genera: {len(common_genera)}")
+        
+        # Correlation analysis
+        print(f"\nCORRELATION ANALYSIS:")
+        
+        # Overall correlation
+        merged_nonzero = self.merged_data[(self.merged_data['VSEARCH'] > 0) & (self.merged_data['QIIME2'] > 0)]
+        if len(merged_nonzero) > 0:
+            overall_corr, p_val = pearsonr(merged_nonzero['VSEARCH'], merged_nonzero['QIIME2'])
+            print(f"Overall abundance correlation: r = {overall_corr:.3f} (p = {p_val:.2e})")
+        
+        # Core microbiome analysis
+        print(f"\nCORE MICROBIOME ANALYSIS:")
+        
+        vs_core = (self.vsearch_data > 0.1).sum(axis=1) / len(self.vsearch_data.columns) > 0.5
+        q2_core = (self.qiime2_data > 0.1).sum(axis=1) / len(self.qiime2_data.columns) > 0.5
+        
+        vs_core_genera = set(self.vsearch_data.index[vs_core])
+        q2_core_genera = set(self.qiime2_data.index[q2_core])
+        
+        print(f"VSEARCH core genera (>50% prevalence): {len(vs_core_genera)}")
+        print(f"QIIME2 core genera (>50% prevalence): {len(q2_core_genera)}")
+        print(f"Shared core genera: {len(vs_core_genera & q2_core_genera)}")
+        
+        # Wound pathogen detection
+        print(f"\nWOUND PATHOGEN DETECTION:")
+        wound_pathogens = ['Acinetobacter', 'Pseudomonas', 'Burkholderia-Caballeronia-Paraburkholderia', 
+                          'Alcaligenes', 'Achromobacter', 'Staphylococcus']
+        
+        for pathogen in wound_pathogens:
+            vs_detected = pathogen in self.vsearch_data.index
+            q2_detected = pathogen in self.qiime2_data.index
+            
+            vs_abundance = self.vsearch_data.loc[pathogen].mean() if vs_detected else 0
+            q2_abundance = self.qiime2_data.loc[pathogen].mean() if q2_detected else 0
+            
+            print(f"{pathogen:35} - VSEARCH: {vs_abundance:6.2f}%, QIIME2: {q2_abundance:6.2f}%")
+        
+        print("\n" + "="*60)
 
-# Combine data
-all_data = vsearch_data + qiime2_data
-df = pd.DataFrame(all_data, columns=['Genus', 'Total_Reads', 'Percent', 'Method'])
 
-print(f"VSEARCH: {len(vsearch_data)} genera")
-print(f"QIIME2: {len(qiime2_data)} genera")
+def main():
+    """Main execution function"""
+    print("Loading metagenomics data for comparison...")
+    
+    # Initialize comparison object
+    comparison = MetagenomicsComparison(
+        'vsearch_genus_summary.txt',
+        'qiime2_genus_summary.txt'
+    )
+    
+    print("\nGenerating visualizations...")
+    
+    # Generate all plots
+    comparison.plot_method_correlation()
+    comparison.plot_core_microbiome()
+    comparison.plot_diversity_analysis()
+    comparison.plot_method_sensitivity()
+    
+    # Generate summary report
+    comparison.generate_summary_report()
+    
+    print("\nVisualization complete! Check the generated PNG files.")
+    print("Files created:")
+    print("- method_correlation_analysis.png")
+    print("- core_microbiome_analysis.png") 
+    print("- diversity_analysis.png")
+    print("- method_sensitivity_analysis.png")
 
-# Create figure with multiple subplots
-fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-fig.suptitle('Microbiome Analysis Comparison: VSEARCH vs QIIME2/DADA2', fontsize=16, fontweight='bold')
 
-# Plot 1: Top 10 genera comparison
-core_genera = ['Acinetobacter', 'Pseudomonas', 'Burkholderia-Caballeronia-Paraburkholderia', 
-               'Achromobacter', 'Alcaligenes', 'Stenotrophomonas', 'Escherichia-Shigella']
-
-comparison_data = []
-for genus in core_genera:
-    vsearch_percent = next((item[2] for item in vsearch_data if item[0] == genus), 0)
-    qiime2_percent = next((item[2] for item in qiime2_data if item[0] == genus), 0)
-    comparison_data.append([genus, vsearch_percent, qiime2_percent])
-
-comp_df = pd.DataFrame(comparison_data, columns=['Genus', 'VSEARCH', 'QIIME2'])
-x = np.arange(len(core_genera))
-width = 0.35
-
-axes[0,0].bar(x - width/2, comp_df['VSEARCH'], width, label='VSEARCH', alpha=0.8)
-axes[0,0].bar(x + width/2, comp_df['QIIME2'], width, label='QIIME2', alpha=0.8)
-axes[0,0].set_xlabel('Genus')
-axes[0,0].set_ylabel('Relative Abundance (%)')
-axes[0,0].set_title('Core Wound Microbiome Comparison')
-axes[0,0].set_xticks(x)
-axes[0,0].set_xticklabels([g.replace('-', '-\n') for g in core_genera], rotation=45, ha='right')
-axes[0,0].legend()
-axes[0,0].grid(True, alpha=0.3)
-
-print("Plot 1 completed: Core genera comparison")
-
-plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust layout for title
-plt.show()  # Show the plots
+if __name__ == "__main__":
+    main()
