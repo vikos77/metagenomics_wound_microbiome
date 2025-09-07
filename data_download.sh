@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create download script for better error handling
+#Download script for better error handling
 
 mkdir -p raw_data
 cd raw_data
