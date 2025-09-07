@@ -115,15 +115,12 @@ Both methods successfully identified the same clinically relevant pathogens:
 │   ├── vsearch_pipeline_sop.md          # Complete VSEARCH workflow
 │   └── qiime2_pipeline_sop.md           # Complete QIIME2 workflow
 ├── scripts/
-│   ├── visualize_comparison.py          # Method comparison plots
-│   └── analysis_utilities.py            # Helper functions
+│   ├── visualization_comparison.py          # Method comparison plots
+│   └── analysis_scripts                 # Helper functions
 ├── results/
 │   ├── vsearch_analysis/               # VSEARCH outputs
 │   ├── qiime2_analysis/                # QIIME2 outputs
 │   └── visualizations/                 # Comparison figures
-├── docs/
-│   ├── troubleshooting_guide.md        # Common issues and solutions
-│   └── method_comparison_report.md     # Detailed results analysis
 └── README.md                           # This file
 ```
 

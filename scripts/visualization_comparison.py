@@ -528,8 +528,8 @@ def main():
     
     # Initialize comparison object
     comparison = MetagenomicsComparison(
-        'vsearch_genus_summary.txt',
-        'qiime2_genus_summary.txt'
+        '../results/visualizations/vsearch_genus_summary.txt',
+        '../results/visualizations/qiime2_genus_summary.txt'
     )
     
     print("\nGenerating visualizations...")
