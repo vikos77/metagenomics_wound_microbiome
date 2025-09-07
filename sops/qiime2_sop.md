@@ -282,10 +282,10 @@ ls -lh taxonomy.qza blast_search_results.qza
 - `--p-num-threads 4`: Use 4 CPU cores for parallel processing
 - `blast_search_results.qza`: Detailed BLAST search results for reference
 
-# During this step the qiime feature-classifier might not work if there are any R packages missing, which
-# was the case here and then the missing package was installed manually by starting R
+**During this step the qiime feature-classifier might not work if there are any R packages missing, which  was the case here and then the missing package was installed manually by starting R**
 
-#Start a  R session
+###Start a  R session
+```bash
 R
 
 # Install BiocManager if not present
@@ -295,7 +295,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 # Install the missing package
 BiocManager::install("GenomeInfoDbData")
 quit()
-
+```
 
 ## Step 10: Examine Taxonomic Results
 
@@ -569,19 +569,6 @@ results/qiime2_analysis/
 │   └── genus_table.tsv
 └── qiime2_genus_summary.txt           # Final results
 ```
-
-## Performance Benchmarks
-
-**Typical Analysis Time:**
-- Data import: 5-10 minutes
-- DADA2 denoising: 10-30 minutes
-- BLAST classification: 15-45 minutes
-- Total pipeline: 1-2 hours
-
-**Resource Usage:**
-- Memory: 4-16GB RAM during DADA2
-- Storage: 1-2GB for intermediate files
-- CPU: Benefits from 4-8 cores
 
 ## Integration with VSEARCH Results
 
